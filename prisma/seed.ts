@@ -1,17 +1,18 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient({ log: ['warn', 'error', 'info', 'query'] })
 
 const users: Prisma.UserCreateInput[] = [
     {
         "email": "arita@email.com",
-        "password": "password",
+        "password": bcrypt.hashSync('arita', 8),
         "firstName": "Arita",
         "lastName": "Osmani"
     },
     {
         "email": "endi@email.com",
-        "password": "password",
+        "password": bcrypt.hashSync('endi', 8),
         "firstName": "Endi",
         "lastName": "Ymeri"
     },
