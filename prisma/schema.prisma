@@ -11,16 +11,17 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  firstName String
-  lastName  String
-  bio       String?
-  joinedAt  DateTime  @default(now())
-  Article   Article[]
-  Comment   Comment[]
-  Like      Like[]
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  password    String
+  firstName   String
+  lastName    String
+  bio         String?
+  avatarImage String    @default("https://robohash.org/default")
+  joinedAt    DateTime  @default(now())
+  articles    Article[]
+  comments    Comment[]
+  likes       Like[]
 }
 
 model Category {
@@ -39,8 +40,8 @@ model Article {
   author     User       @relation(fields: [userId], references: [id])
   userId     Int
   categories Category[]
-  Comment    Comment[]
-  Like       Like[]
+  comments   Comment[]
+  likes      Like[]
 }
 
 model Comment {

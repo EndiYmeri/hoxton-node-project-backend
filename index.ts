@@ -7,6 +7,8 @@ import 'dotenv/config'
 
 const app = express()
 app.use(cors())
+app.use(express.json())
+
 const PORT = 4000
 
 const prisma = new PrismaClient({log:['warn','error','info','query']})
@@ -35,6 +37,7 @@ app.post('/users',async (req,res) => {
             res.send({user, token})
         }else throw Error("User already exists")
     }catch(err){
+        // @ts-ignore
         res.send({error: err.message})
     }
     
@@ -44,7 +47,13 @@ app.post('/users',async (req,res) => {
 app.post('/login', async (req,res)=>{
     const {email, password} = req.body
     try{
-        const user = await prisma.user.findUnique({where:email})
+        const user = await prisma.user.findUnique({
+            where:{email},
+            include:{
+                articles: true
+            }
+            
+        })
         if(user){
             const token = createToken(user.id)
             const passwordMatches = bcrypt.compareSync(password,user.password)
@@ -59,9 +68,9 @@ app.post('/login', async (req,res)=>{
     }
     catch(err){
         //@ts-ignore
-        res.status(400).send({error:'User/password invalid'})
+        res.status(400).send({error:err.message})
     }
 })
 
 
-app.listen(PORT, ()=>console.log(`Server up on https://localhost:${PORT}`))
+app.listen(PORT, ()=>console.log(`Server up on http://localhost:${PORT}`))
