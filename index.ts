@@ -22,6 +22,7 @@ function createToken(id:number){
     return token
 }
 
+
 app.post('/users',async (req,res) => {
     const {email, firstName, lastName, password, bio = "" } = req.body
     try{
@@ -41,7 +42,6 @@ app.post('/users',async (req,res) => {
         res.send({error: err.message})
     }
     
-
 })
 
 app.post('/login', async (req,res)=>{
