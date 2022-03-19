@@ -16,7 +16,7 @@ model User {
   password  String
   firstName String
   lastName  String
-  bio       String
+  bio       String?
   joinedAt  DateTime  @default(now())
   Article   Article[]
   Comment   Comment[]
