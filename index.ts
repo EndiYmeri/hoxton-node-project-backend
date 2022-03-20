@@ -171,4 +171,33 @@ app.post('/likes', async (req, res) => {
     }
 })
 
+app.post('/comments', async (req, res) => {
+    const token = req.headers.authorization || ''
+    const { article, content } = req.body
+    try {
+        const user = await getUserFromToken(token)
+        if (!user) {
+            res.status(400).send({ error: 'Invalid token' })
+        } else {
+            //check if the article exists:
+            const articleMatched = await prisma.article.findFirst({ where: { id: article.id } })
+            if (articleMatched) {
+                const newComment = await prisma.comment.create({
+                    data: {
+                        articleId: article.id,
+                        userId: user.id,
+                        content: content
+                    }
+                })
+                res.status(200).send(newComment)
+            } else {
+                res.status(404).send({ error: 'This article does not exist' })
+            }
+        }
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send({ error: err.message })
+    }
+})
+
 app.listen(PORT, () => console.log(`Server up on http://localhost:${PORT}`))
