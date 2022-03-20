@@ -97,4 +97,37 @@ app.get('/validate', async (req, res) => {
 
 })
 
+app.post('/article', async (req, res) => {
+    const token = req.headers.authorization || ''
+    const { title, image, intro, content, createdAt, categories } = req.body
+    try {
+        const user = await getUserFromToken(token)
+        if (!user) {
+            res.status(400).send({ error: 'Invalid token' })
+        } else {
+            const newArticle = await prisma.article.create({
+                data: {
+                    title,
+                    image,
+                    intro,
+                    content,
+                    userId: user.id,
+                    createdAt,
+                    categories: {
+                        connect: categories.map((category: any) => ({
+                            name: category.name
+                        }))
+                    }
+                }
+            })
+            res.status(200).send(newArticle)
+        }
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send(`<pre>${err.message}</pre>`)
+        // res.status(400).send({ error: err.message })
+    }
+
+})
+
 app.listen(PORT, () => console.log(`Server up on http://localhost:${PORT}`))
