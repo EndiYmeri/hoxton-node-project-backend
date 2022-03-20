@@ -200,4 +200,33 @@ app.post('/comments', async (req, res) => {
     }
 })
 
+app.get('/articles', async (req, res) => {
+    const articles = await prisma.article.findMany({ include: { categories: true } })
+    res.status(200).send(articles)
+})
+
+app.get('/articles/:category', async (req, res) => {
+    let category = req.params.category
+    try {
+        //check if the category given exists:
+        const categoryExists = await prisma.category.findUnique({ where: { name: category } })
+        console.log('categoryExists: ', categoryExists)
+        if (categoryExists) {
+            const allArticles = await prisma.article.findMany({ include: { categories: true } })
+            const matches = allArticles.filter(article => {
+                const categoryMatch = article.categories.filter(c => c.name === categoryExists.name)
+                console.log('categoryMatches: ', categoryMatch)
+                if (categoryMatch.length !== 0) return true
+
+            })
+            res.send(matches)
+        } else {
+            res.send({ error: 'No matches found' })
+        }
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send({ error: err.message })
+    }
+})
+
 app.listen(PORT, () => console.log(`Server up on http://localhost:${PORT}`))
