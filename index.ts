@@ -144,7 +144,7 @@ app.post('/likes', async (req, res) => {
                 res.status(400).send({ error: 'This article does not exist' })
             } else {
                 if (matchedArticle.userId === user.id) {
-                    res.status(400).send('You can\'t like your own post')
+                    res.status(400).send({ error: 'You can\'t like your own post' })
                 } else {
                     //check if the logged in user has already liked this article
                     const alreadyLiked = await prisma.like.findFirst({ where: { userId: user.id, articleId: article.id } })
