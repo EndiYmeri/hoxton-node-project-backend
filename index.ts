@@ -130,4 +130,45 @@ app.post('/article', async (req, res) => {
 
 })
 
+app.post('/likes', async (req, res) => {
+    const token = req.headers.authorization || ''
+    const { article } = req.body
+    try {
+        const user = await getUserFromToken(token)
+        if (!user) {
+            res.status(400).send({ error: 'Invalid token' })
+        } else {
+            //check if the article belongs to the logged in user
+            const matchedArticle = await prisma.article.findFirst({ where: { id: article.id } })
+            if (!matchedArticle) {
+                res.status(400).send({ error: 'This article does not exist' })
+            } else {
+                if (matchedArticle.userId === user.id) {
+                    res.status(400).send('You can\'t like your own post')
+                } else {
+                    //check if the logged in user has already liked this article
+                    const alreadyLiked = await prisma.like.findFirst({ where: { userId: user.id, articleId: article.id } })
+                    if (alreadyLiked) {
+                        res.status(400).send({ error: 'You have already liked this article' })
+                    } else {
+                        const newLike = await prisma.like.create({
+                            data: {
+                                articleId: article.id,
+                                userId: user.id
+                            }
+                        })
+                        res.status(200).send(newLike)
+                    }
+                }
+
+            }
+
+        }
+
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send({ error: err.message })
+    }
+})
+
 app.listen(PORT, () => console.log(`Server up on http://localhost:${PORT}`))
