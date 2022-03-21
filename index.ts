@@ -201,11 +201,10 @@ app.post('/comments', async (req, res) => {
 })
 
 
-app.get('lengh')
-
 app.get('/articles', async (req, res) => {
     let pageNr = Number(req.query.page)
-    let articlePerPage = await prisma.article.count()
+    const totalArticlesCount = await prisma.article.count() 
+    let articlePerPage = totalArticlesCount
     let postsToSkip = 0
     
     if(pageNr){
@@ -216,9 +215,13 @@ app.get('/articles', async (req, res) => {
         skip: postsToSkip,
         take: articlePerPage,
         include: { categories: true, author: true } 
-        
     })
-    res.status(200).send(articles)
+    if(pageNr){
+        res.status(200).send({articles, articlesCount: totalArticlesCount  })
+    }else{
+        res.status(200).send(articles)
+    }
+    
 })
 
 app.get('/articles/:category', async (req, res) => {
@@ -247,7 +250,19 @@ app.get('/articles/:category', async (req, res) => {
                     }
                 }
             })
-            res.send(allArticles)
+            const totalArticlesCount = await prisma.article.count({
+                where:{
+                    categories:{
+                        some:{name:category}
+                    }
+                }
+            })
+            if(pageNr){
+                res.status(200).send({articles: allArticles, articlesCount: totalArticlesCount  })
+            }else{
+                res.status(200).send(allArticles)
+            }
+
         } else {
             res.send({ error: 'No matches found' })
         }
