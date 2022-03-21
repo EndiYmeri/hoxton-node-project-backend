@@ -201,7 +201,7 @@ app.post('/comments', async (req, res) => {
 })
 
 app.get('/articles', async (req, res) => {
-    const articles = await prisma.article.findMany({ include: { categories: true } })
+    const articles = await prisma.article.findMany({ include: { categories: true, author: true } })
     res.status(200).send(articles)
 })
 
@@ -213,12 +213,12 @@ app.get('/articles/:category', async (req, res) => {
         console.log('categoryExists: ', categoryExists)
         if (categoryExists) {
             const allArticles = await prisma.article.findMany({ include: { categories: true } })
-            const matches = allArticles.filter(article => {
-                const categoryMatch = article.categories.filter(c => c.name === categoryExists.name)
-                console.log('categoryMatches: ', categoryMatch)
-                if (categoryMatch.length !== 0) return true
+            const matches = allArticles.filter(article =>
+                // const categoryMatch = article.categories.filter(c => c.name === categoryExists.name)
+                article.categories.includes(categoryExists)
+                // if (categoryMatch.length !== 0) return true
 
-            })
+            )
             res.send(matches)
         } else {
             res.send({ error: 'No matches found' })
