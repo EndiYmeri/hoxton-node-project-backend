@@ -201,7 +201,7 @@ app.post('/comments', async (req, res) => {
 })
 
 
-app.get('lengh')
+// app.get('lengh')
 
 app.get('/articles', async (req, res) => {
     let pageNr = Number(req.query.page)
