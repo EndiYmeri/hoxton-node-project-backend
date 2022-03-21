@@ -213,12 +213,9 @@ app.get('/articles/:category', async (req, res) => {
         console.log('categoryExists: ', categoryExists)
         if (categoryExists) {
             const allArticles = await prisma.article.findMany({ include: { categories: true } })
-            const matches = allArticles.filter(article =>
+            const matches = allArticles.filter(article => article.categories.includes(categoryExists))
                 // const categoryMatch = article.categories.filter(c => c.name === categoryExists.name)
-                article.categories.includes(categoryExists)
                 // if (categoryMatch.length !== 0) return true
-
-            )
             res.send(matches)
         } else {
             res.send({ error: 'No matches found' })
