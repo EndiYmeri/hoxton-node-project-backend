@@ -272,4 +272,32 @@ app.get('/articles/:category', async (req, res) => {
     }
 })
 
+app.get('/categories', async (req, res) => {
+    try {
+        const categories = await prisma.category.findMany()
+        res.status(200).send(categories)
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send({ error: err.message })
+    }
+})
+
+app.post('/subscribe', async (req, res) => {
+    const { email } = req.body
+    try {
+        const alreadyExists = await prisma.subscribe.findUnique({ where: { email } })
+        if (alreadyExists) {
+            res.status(400).send({ error: 'You already subscribed' })
+        } else {
+            const newSubscribe = await prisma.subscribe.create({ data: { email } })
+            res.status(200).send(newSubscribe)
+        }
+
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send({ error: err.message })
+    }
+})
+
+
 app.listen(PORT, () => console.log(`Server up on http://localhost:${PORT}`))
