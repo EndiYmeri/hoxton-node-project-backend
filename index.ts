@@ -200,23 +200,54 @@ app.post('/comments', async (req, res) => {
     }
 })
 
+
+app.get('lengh')
+
 app.get('/articles', async (req, res) => {
-    const articles = await prisma.article.findMany({ include: { categories: true, author: true } })
+    let pageNr = Number(req.query.page)
+    let articlePerPage = await prisma.article.count()
+    let postsToSkip = 0
+    
+    if(pageNr){
+        articlePerPage = 5
+        postsToSkip = articlePerPage * pageNr - articlePerPage
+    }
+    const articles = await prisma.article.findMany({
+        skip: postsToSkip,
+        take: articlePerPage,
+        include: { categories: true, author: true } 
+        
+    })
     res.status(200).send(articles)
 })
 
 app.get('/articles/:category', async (req, res) => {
     let category = req.params.category
+    let pageNr = Number(req.query.page)
+    let articlePerPage = await prisma.article.count()
+    let postsToSkip = 0
+    if(pageNr){
+        articlePerPage = 1
+        postsToSkip = articlePerPage * pageNr - articlePerPage
+    }
     try {
         //check if the category given exists:
         const categoryExists = await prisma.category.findUnique({ where: { name: category } })
         console.log('categoryExists: ', categoryExists)
         if (categoryExists) {
-            const allArticles = await prisma.article.findMany({ include: { categories: true } })
-            const matches = allArticles.filter(article => article.categories.includes(categoryExists))
-                // const categoryMatch = article.categories.filter(c => c.name === categoryExists.name)
-                // if (categoryMatch.length !== 0) return true
-            res.send(matches)
+            const allArticles = await prisma.article.findMany({
+                skip: postsToSkip,
+                take: articlePerPage,
+                include: { categories: true },
+                where:{
+                    categories:{
+                        some:{
+                            name:category
+                        }
+                    }
+                }
+            })
+            res.send(allArticles)
         } else {
             res.send({ error: 'No matches found' })
         }
