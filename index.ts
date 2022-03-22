@@ -125,7 +125,6 @@ app.post('/article', async (req, res) => {
     }
 })
 
-
 app.patch('/article/:id', async (req, res) => {
     const token = req.headers.authorization || ''
     const id = Number(req.params.id)
@@ -350,7 +349,6 @@ app.post('/subscribe', async (req, res) => {
 
 app.get('/users/:username', async (req, res) => {
     const username = req.params.username
-
     try {
         const user = await prisma.user.findUnique({ where: { username }, include: { articles: { include: { categories: true } }, } })
         if (user) {
