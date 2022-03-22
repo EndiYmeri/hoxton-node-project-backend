@@ -101,7 +101,7 @@ app.post('/article', async (req, res) => {
     const token = req.headers.authorization || ''
     const { title, image, intro, content, createdAt, categories } = req.body
     // @ts-ignore
-    const mappedCategories = categories.map(category => ({name:category}))
+    const mappedCategories = categories.map(category => ({ name: category }))
 
     try {
         const user = await getUserFromToken(token)
@@ -203,25 +203,25 @@ app.post('/comments', async (req, res) => {
 
 app.get('/articles', async (req, res) => {
     let pageNr = Number(req.query.page)
-    const totalArticlesCount = await prisma.article.count() 
+    const totalArticlesCount = await prisma.article.count()
     let articlePerPage = totalArticlesCount
     let postsToSkip = 0
-    
-    if(pageNr){
+
+    if (pageNr) {
         articlePerPage = 5
         postsToSkip = articlePerPage * pageNr - articlePerPage
     }
     const articles = await prisma.article.findMany({
         skip: postsToSkip,
         take: articlePerPage,
-        include: { categories: true, author: true } 
+        include: { categories: true, author: true }
     })
-    if(pageNr){
-        res.status(200).send({articles, articlesCount: totalArticlesCount  })
-    }else{
+    if (pageNr) {
+        res.status(200).send({ articles, articlesCount: totalArticlesCount })
+    } else {
         res.status(200).send(articles)
     }
-    
+
 })
 
 app.get('/articles/:category', async (req, res) => {
@@ -229,7 +229,7 @@ app.get('/articles/:category', async (req, res) => {
     let pageNr = Number(req.query.page)
     let articlePerPage = await prisma.article.count()
     let postsToSkip = 0
-    if(pageNr){
+    if (pageNr) {
         articlePerPage = 1
         postsToSkip = articlePerPage * pageNr - articlePerPage
     }
@@ -242,24 +242,24 @@ app.get('/articles/:category', async (req, res) => {
                 skip: postsToSkip,
                 take: articlePerPage,
                 include: { categories: true },
-                where:{
-                    categories:{
-                        some:{
-                            name:category
+                where: {
+                    categories: {
+                        some: {
+                            name: category
                         }
                     }
                 }
             })
             const totalArticlesCount = await prisma.article.count({
-                where:{
-                    categories:{
-                        some:{name:category}
+                where: {
+                    categories: {
+                        some: { name: category }
                     }
                 }
             })
-            if(pageNr){
-                res.status(200).send({articles: allArticles, articlesCount: totalArticlesCount  })
-            }else{
+            if (pageNr) {
+                res.status(200).send({ articles: allArticles, articlesCount: totalArticlesCount })
+            } else {
                 res.status(200).send(allArticles)
             }
 
@@ -299,5 +299,19 @@ app.post('/subscribe', async (req, res) => {
     }
 })
 
+app.get('/users/:email', async (req, res) => {
+    const email = req.params.email
+    try {
+        const user = await prisma.user.findUnique({ where: { email }, include: { articles: true } })
+        if (user) {
+            res.status(200).send(user)
+        } else {
+            res.status(404).send({ error: 'User not found' })
+        }
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send({ error: err.message })
+    }
+})
 
 app.listen(PORT, () => console.log(`Server up on http://localhost:${PORT}`))
