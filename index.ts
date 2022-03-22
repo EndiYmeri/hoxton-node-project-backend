@@ -131,29 +131,29 @@ app.patch('/article/:id', async (req, res) => {
     const id = Number(req.params.id)
     try {
         const articleFound = await prisma.article.findUnique({
-            where:{id},
-            include:{
-                categories:true,
+            where: { id },
+            include: {
+                categories: true,
                 author: true
             }
         })
-        if(articleFound){
-            const { 
-                title = articleFound.title, 
-                image = articleFound.image, 
-                intro = articleFound.image,  
-                content = articleFound.content, 
-                categories = articleFound.categories 
+        if (articleFound) {
+            const {
+                title = articleFound.title,
+                image = articleFound.image,
+                intro = articleFound.image,
+                content = articleFound.content,
+                categories = articleFound.categories
             } = req.body
 
             // @ts-ignore
-            const categoriesMapped = categories.map(category => ({name: category.name}))
+            const categoriesMapped = categories.map(category => ({ name: category.name }))
             console.log(categoriesMapped)
 
             const user = await getUserFromToken(token)
             if (user && user.id === articleFound.author.id) {
                 const newArticle = await prisma.article.update({
-                    where:{id},
+                    where: { id },
                     data: {
                         title,
                         image,
@@ -163,8 +163,8 @@ app.patch('/article/:id', async (req, res) => {
                             connect: categoriesMapped
                         }
                     },
-                    include:{
-                        comments:true,
+                    include: {
+                        comments: true,
                         likes: true,
                         categories: true,
                     }
@@ -173,7 +173,7 @@ app.patch('/article/:id', async (req, res) => {
             } else {
                 res.status(400).send({ error: 'Invalid token or user doesnt match' })
             }
-        }else{
+        } else {
             res.status(404).send({ error: 'Article not found' })
         }
     } catch (err) {
@@ -352,12 +352,13 @@ app.get('/users/:username', async (req, res) => {
     const username = req.params.username
 
     try {
-        const user = await prisma.user.findUnique({ where: { username }, include: { articles: {include: {categories: true}}, } })
+        const user = await prisma.user.findUnique({ where: { username }, include: { articles: { include: { categories: true } }, } })
         if (user) {
             res.status(200).send(user)
         } else {
             res.status(404).send({ error: 'User not found' })
         }
+
     } catch (err) {
         //@ts-ignore
         res.status(400).send({ error: err.message })
