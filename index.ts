@@ -31,13 +31,13 @@ async function getUserFromToken(token: string) {
 }
 
 app.post('/users', async (req, res) => {
-    const { email, firstName, lastName, password, bio = "" } = req.body
+    const { email, username, firstName, lastName, password, bio = "" } = req.body
     try {
 
         const hash = bcrypt.hashSync(password, 8)
         const user = await prisma.user.create({
             data: {
-                email, firstName, lastName, password: hash, bio
+                email, username, firstName, lastName, password: hash, bio
             }
         })
         if (user) {
@@ -48,7 +48,6 @@ app.post('/users', async (req, res) => {
         // @ts-ignore
         res.send({ error: err.message })
     }
-
 })
 
 app.post('/login', async (req, res) => {
@@ -99,10 +98,7 @@ app.get('/validate', async (req, res) => {
 
 app.post('/article', async (req, res) => {
     const token = req.headers.authorization || ''
-    const { title, image, intro, content, createdAt, categories } = req.body
-    // @ts-ignore
-    const mappedCategories = categories.map(category => ({ name: category }))
-
+    const { title, image, intro, content, categories } = req.body
     try {
         const user = await getUserFromToken(token)
         if (!user) {
@@ -116,7 +112,7 @@ app.post('/article', async (req, res) => {
                     content,
                     userId: user.id,
                     categories: {
-                        connect: mappedCategories
+                        connect: categories
                     }
                 }
             })
@@ -127,7 +123,63 @@ app.post('/article', async (req, res) => {
         res.status(400).send(`<pre>${err.message}</pre>`)
         // res.status(400).send({ error: err.message })
     }
+})
 
+
+app.patch('/article/:id', async (req, res) => {
+    const token = req.headers.authorization || ''
+    const id = Number(req.params.id)
+    try {
+        const articleFound = await prisma.article.findUnique({
+            where:{id},
+            include:{
+                categories:true,
+                author: true
+            }
+        })
+        if(articleFound){
+            const { 
+                title = articleFound.title, 
+                image = articleFound.image, 
+                intro = articleFound.image,  
+                content = articleFound.content, 
+                categories = articleFound.categories 
+            } = req.body
+
+            // @ts-ignore
+            const categoriesMapped = categories.map(category => ({name: category.name}))
+            console.log(categoriesMapped)
+
+            const user = await getUserFromToken(token)
+            if (user && user.id === articleFound.author.id) {
+                const newArticle = await prisma.article.update({
+                    where:{id},
+                    data: {
+                        title,
+                        image,
+                        intro,
+                        content,
+                        categories: {
+                            connect: categoriesMapped
+                        }
+                    },
+                    include:{
+                        comments:true,
+                        likes: true,
+                        categories: true,
+                    }
+                })
+                res.send(newArticle)
+            } else {
+                res.status(400).send({ error: 'Invalid token or user doesnt match' })
+            }
+        }else{
+            res.status(404).send({ error: 'Article not found' })
+        }
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send(`<pre>${err.message}</pre>`)
+    }
 })
 
 app.post('/likes', async (req, res) => {
@@ -160,9 +212,7 @@ app.post('/likes', async (req, res) => {
                         res.status(200).send(newLike)
                     }
                 }
-
             }
-
         }
 
     } catch (err) {
@@ -292,17 +342,17 @@ app.post('/subscribe', async (req, res) => {
             const newSubscribe = await prisma.subscribe.create({ data: { email } })
             res.status(200).send(newSubscribe)
         }
-
     } catch (err) {
         //@ts-ignore
         res.status(400).send({ error: err.message })
     }
 })
 
-app.get('/users/:email', async (req, res) => {
-    const email = req.params.email
+app.get('/users/:username', async (req, res) => {
+    const username = req.params.username
+
     try {
-        const user = await prisma.user.findUnique({ where: { email }, include: { articles: true } })
+        const user = await prisma.user.findUnique({ where: { username }, include: { articles: {include: {categories: true}}, } })
         if (user) {
             res.status(200).send(user)
         } else {

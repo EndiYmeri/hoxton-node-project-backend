@@ -6,12 +6,14 @@ const prisma = new PrismaClient({ log: ['warn', 'error', 'info', 'query'] })
 const users: Prisma.UserCreateInput[] = [
     {
         "email": "arita@email.com",
+        "username": "arita",
         "password": bcrypt.hashSync('arita', 8),
         "firstName": "Arita",
         "lastName": "Osmani"
     },
     {
         "email": "endi@email.com",
+        "username": "endi",
         "password": bcrypt.hashSync('endi', 8),
         "firstName": "Endi",
         "lastName": "Ymeri"
