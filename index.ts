@@ -100,6 +100,9 @@ app.get('/validate', async (req, res) => {
 app.post('/article', async (req, res) => {
     const token = req.headers.authorization || ''
     const { title, image, intro, content, createdAt, categories } = req.body
+    // @ts-ignore
+    const mappedCategories = categories.map(category => ({name:category}))
+
     try {
         const user = await getUserFromToken(token)
         if (!user) {
@@ -112,11 +115,8 @@ app.post('/article', async (req, res) => {
                     intro,
                     content,
                     userId: user.id,
-                    createdAt,
                     categories: {
-                        connect: categories.map((category: any) => ({
-                            name: category.name
-                        }))
+                        connect: mappedCategories
                     }
                 }
             })

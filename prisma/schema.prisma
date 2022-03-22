@@ -36,7 +36,7 @@ model Article {
   image      String
   intro      String
   content    String
-  createdAt  DateTime
+  createdAt  DateTime   @default(now())
   author     User       @relation(fields: [userId], references: [id])
   userId     Int
   categories Category[]
