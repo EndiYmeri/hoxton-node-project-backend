@@ -404,7 +404,8 @@ app.get('/popular', async (req, res) => {
                         likes: true
                     }
                 },
-                author: true
+                author: true,
+                categories: true
             }
 
         })
