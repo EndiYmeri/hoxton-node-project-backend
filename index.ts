@@ -311,7 +311,7 @@ app.get('/articles/:category', async (req, res) => {
     let articlePerPage = await prisma.article.count()
     let postsToSkip = 0
     if (pageNr) {
-        articlePerPage = 1
+        articlePerPage = 3
         postsToSkip = articlePerPage * pageNr - articlePerPage
     }
     try {
