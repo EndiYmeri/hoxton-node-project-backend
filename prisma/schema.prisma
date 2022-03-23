@@ -38,7 +38,7 @@ model Article {
   intro      String
   content    String
   createdAt  DateTime   @default(now())
-  author     User       @relation(fields: [userId], references: [id])
+  author     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     Int
   categories Category[]
   comments   Comment[]
@@ -47,8 +47,8 @@ model Article {
 
 model Comment {
   id        Int     @id @default(autoincrement())
-  user      User    @relation(fields: [userId], references: [id])
-  article   Article @relation(fields: [articleId], references: [id])
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
   content   String
   userId    Int
   articleId Int
@@ -56,8 +56,8 @@ model Comment {
 
 model Like {
   id        Int     @id @default(autoincrement())
-  user      User    @relation(fields: [userId], references: [id])
-  article   Article @relation(fields: [articleId], references: [id])
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
   userId    Int
   articleId Int
 }

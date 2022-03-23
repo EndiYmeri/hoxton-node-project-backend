@@ -418,4 +418,32 @@ app.get('/popular', async (req, res) => {
 
 })
 
+app.delete('/article/:id', async (req, res) => {
+    const id = Number(req.params.id)
+    const token = req.headers.authorization || ''
+    try {
+        const user = await getUserFromToken(token)
+        if (user) {
+            const article = await prisma.article.findUnique({ where: { id } })
+            if (article) {
+                if (article.userId === user.id) {
+                    await prisma.article.delete({ where: { id } })
+                    res.status(200).send({ message: 'Article deleted sucessfully' })
+                } else {
+                    res.status(400).send({ error: 'You are not authorized to delete this article!' })
+                }
+            } else {
+                res.status(404).send({ error: 'Article not found!' })
+            }
+        } else {
+            res.status(400).send({ error: 'Invalid token' })
+        }
+
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send({ error: err.message })
+    }
+
+})
+
 app.listen(PORT, () => console.log(`Server up on http://localhost:${PORT}`))
