@@ -99,7 +99,15 @@ app.get('/validate', async (req, res) => {
 app.post('/article', async (req, res) => {
     const token = req.headers.authorization || ''
     const { title, image, intro, content, categories } = req.body
+
+    
     try {
+        let categoriesMapped = categories
+        if(typeof categories[0]=== "string"){
+            // @ts-ignore
+            categoriesMapped = categories.map(category => ({ name: category }))
+        }
+
         const user = await getUserFromToken(token)
         if (!user) {
             res.status(400).send({ error: 'Invalid token' })
@@ -112,7 +120,7 @@ app.post('/article', async (req, res) => {
                     content,
                     userId: user.id,
                     categories: {
-                        connect: categories
+                        connect: categoriesMapped
                     }
                 }
             })
@@ -122,6 +130,30 @@ app.post('/article', async (req, res) => {
         //@ts-ignore
         res.status(400).send(`<pre>${err.message}</pre>`)
         // res.status(400).send({ error: err.message })
+    }
+})
+
+app.get('/article/:id',async (req, res) => {
+    const id = Number(req.params.id)
+    try{
+        const article = await prisma.article.findUnique({
+            where:{id},
+            include:{
+                author:true,
+                categories: true,
+                comments: true,
+                likes: true
+            }
+        })
+        if(article){
+            res.send(article)
+        }else{
+            res.status(404).send("Article not found")
+        }
+
+    }catch(err){
+        //@ts-ignore
+        res.status(400).send(`<pre>${err.message}</pre>`)
     }
 })
 
@@ -144,11 +176,12 @@ app.patch('/article/:id', async (req, res) => {
                 content = articleFound.content,
                 categories = articleFound.categories
             } = req.body
-
+            console.log("ArticleFound", articleFound.categories)
+            console.log( categories);
             // @ts-ignore
-            const categoriesMapped = categories.map(category => ({ name: category.name }))
-            console.log(categoriesMapped)
-
+            const categoriesMapped = categories.map(category => ({ name: category }))
+            console.log(categoriesMapped);
+            
             const user = await getUserFromToken(token)
             if (user && user.id === articleFound.author.id) {
                 const newArticle = await prisma.article.update({
@@ -248,7 +281,6 @@ app.post('/comments', async (req, res) => {
         res.status(400).send({ error: err.message })
     }
 })
-
 
 app.get('/articles', async (req, res) => {
     let pageNr = Number(req.query.page)
