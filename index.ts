@@ -100,10 +100,10 @@ app.post('/article', async (req, res) => {
     const token = req.headers.authorization || ''
     const { title, image, intro, content, categories } = req.body
 
-    
+
     try {
         let categoriesMapped = categories
-        if(typeof categories[0]=== "string"){
+        if (typeof categories[0] === "string") {
             // @ts-ignore
             categoriesMapped = categories.map(category => ({ name: category }))
         }
@@ -133,25 +133,25 @@ app.post('/article', async (req, res) => {
     }
 })
 
-app.get('/article/:id',async (req, res) => {
+app.get('/article/:id', async (req, res) => {
     const id = Number(req.params.id)
-    try{
+    try {
         const article = await prisma.article.findUnique({
-            where:{id},
-            include:{
-                author:true,
+            where: { id },
+            include: {
+                author: true,
                 categories: true,
                 comments: true,
                 likes: true
             }
         })
-        if(article){
+        if (article) {
             res.send(article)
-        }else{
+        } else {
             res.status(404).send("Article not found")
         }
 
-    }catch(err){
+    } catch (err) {
         //@ts-ignore
         res.status(400).send(`<pre>${err.message}</pre>`)
     }
@@ -177,11 +177,11 @@ app.patch('/article/:id', async (req, res) => {
                 categories = articleFound.categories
             } = req.body
             console.log("ArticleFound", articleFound.categories)
-            console.log( categories);
+            console.log(categories);
             // @ts-ignore
             const categoriesMapped = categories.map(category => ({ name: category }))
             console.log(categoriesMapped);
-            
+
             const user = await getUserFromToken(token)
             if (user && user.id === articleFound.author.id) {
                 const newArticle = await prisma.article.update({
@@ -322,7 +322,7 @@ app.get('/articles/:category', async (req, res) => {
             const allArticles = await prisma.article.findMany({
                 skip: postsToSkip,
                 take: articlePerPage,
-                include: { categories: true },
+                include: { categories: true, author: true, _count: { select: { comments: true, likes: true } } },
                 where: {
                     categories: {
                         some: {
