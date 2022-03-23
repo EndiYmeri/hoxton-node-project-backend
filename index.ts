@@ -395,4 +395,26 @@ app.get('/users/:username', async (req, res) => {
     }
 })
 
+app.get('/popular', async (req, res) => {
+    try {
+        const articles = await prisma.article.findMany({
+            include: {
+                _count: {
+                    select: {
+                        likes: true
+                    }
+                },
+                author: true
+            }
+
+        })
+        const popularArticles = articles.filter(article => article['_count'].likes > 4)
+        res.send(popularArticles)
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send({ error: err.message })
+    }
+
+})
+
 app.listen(PORT, () => console.log(`Server up on http://localhost:${PORT}`))
