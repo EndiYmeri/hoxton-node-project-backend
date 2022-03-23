@@ -289,7 +289,7 @@ app.get('/articles', async (req, res) => {
     let postsToSkip = 0
 
     if (pageNr) {
-        articlePerPage = 5
+        articlePerPage = 6
         postsToSkip = articlePerPage * pageNr - articlePerPage
     }
     const articles = await prisma.article.findMany({
