@@ -11,7 +11,7 @@ app.use(express.json())
 
 const PORT = 4000
 
-const prisma = new PrismaClient({ log: ['warn', 'error', 'info', 'query'] })
+const prisma = new PrismaClient()
 
 
 // secretVariable = "nosecretshere"
@@ -54,19 +54,19 @@ app.patch('/users/:id', async (req, res) => {
     const id = Number(req.params.id)
     try {
         const user = await getUserFromToken(token)
-        if(user && user.id === id){
-            const { 
+        if (user && user.id === id) {
+            const {
                 email = user.email,
-                username = user.username, 
-                firstName = user.firstName, 
+                username = user.username,
+                firstName = user.firstName,
                 lastName = user.lastName,
                 password,
-                bio = user.bio 
+                bio = user.bio
             } = req.body
-            
+
             const hash = bcrypt.hashSync(password, 8)
             const userUpdated = await prisma.user.update({
-                where: {id},
+                where: { id },
                 data: {
                     email, username, firstName, lastName, password: hash, bio
                 },
@@ -89,7 +89,7 @@ app.patch('/users/:id', async (req, res) => {
 app.post('/login', async (req, res) => {
     const { email, password } = req.body
     try {
-        const user = await prisma.user.findUnique({ where: { email }})
+        const user = await prisma.user.findUnique({ where: { email } })
         if (user) {
             const token = createToken(user.id)
             const passwordMatches = bcrypt.compareSync(password, user.password)
@@ -312,81 +312,189 @@ app.post('/comments', async (req, res) => {
 })
 
 app.get('/articles', async (req, res) => {
+    const token = req.headers.authorization || ''
     let pageNr = Number(req.query.page)
-    const totalArticlesCount = await prisma.article.count()
-    let articlePerPage = totalArticlesCount
-    let postsToSkip = 0
+    if (token !== '') {
+        const user = await getUserFromToken(token)
+        if (user) {
+            const totalArticlesCount = await prisma.article.count({ where: { userId: { not: user.id } } })
+            console.log(totalArticlesCount)
+            let articlePerPage = totalArticlesCount
+            let postsToSkip = 0
 
-    if (pageNr) {
-        articlePerPage = 6
-        postsToSkip = articlePerPage * pageNr - articlePerPage
-    }
-    const articles = await prisma.article.findMany({
-        skip: postsToSkip,
-        take: articlePerPage,
-        include: { 
-            categories: true,
-            author: true, 
-            _count:{
-                select:{
-                    categories:true,
-                    likes:true
+            if (pageNr) {
+                articlePerPage = 6
+                postsToSkip = articlePerPage * pageNr - articlePerPage
+            }
+            const articles = await prisma.article.findMany({
+                where: {
+                    userId: {
+                        not: user.id
+                    }
+                },
+                skip: postsToSkip,
+                take: articlePerPage,
+                include: {
+                    categories: true,
+                    author: true,
+                    _count: {
+                        select: {
+                            categories: true,
+                            likes: true
+                        }
+                    }
                 }
-            } 
+            })
+
+            if (pageNr) {
+                res.status(200).send({ articles, articlesCount: totalArticlesCount })
+            } else {
+                res.status(200).send(articles)
+            }
+
+
+        } else {
+            res.status(404).send('Invalied token')
         }
-    })
-    if (pageNr) {
-        res.status(200).send({ articles, articlesCount: totalArticlesCount })
     } else {
-        res.status(200).send(articles)
+        const totalArticlesCount = await prisma.article.count()
+        let articlePerPage = totalArticlesCount
+        let postsToSkip = 0
+
+        if (pageNr) {
+            articlePerPage = 6
+            postsToSkip = articlePerPage * pageNr - articlePerPage
+        }
+        const articles = await prisma.article.findMany({
+            skip: postsToSkip,
+            take: articlePerPage,
+            include: {
+                categories: true,
+                author: true,
+                _count: {
+                    select: {
+                        categories: true,
+                        likes: true
+                    }
+                }
+            }
+        })
+
+        if (pageNr) {
+            res.status(200).send({ articles, articlesCount: totalArticlesCount })
+        } else {
+            res.status(200).send(articles)
+        }
+        res.send('Inside else')
     }
+
 })
 
 app.get('/articles/:category', async (req, res) => {
     let category = req.params.category
     let pageNr = Number(req.query.page)
-    let articlePerPage = await prisma.article.count()
-    let postsToSkip = 0
-    if (pageNr) {
-        articlePerPage = 3
-        postsToSkip = articlePerPage * pageNr - articlePerPage
-    }
-    try {
-        //check if the category given exists:
-        const categoryExists = await prisma.category.findUnique({ where: { name: category } })
-        console.log('categoryExists: ', categoryExists)
-        if (categoryExists) {
-            const allArticles = await prisma.article.findMany({
-                skip: postsToSkip,
-                take: articlePerPage,
-                include: { categories: true, author: true, _count: { select: { comments: true, likes: true } } },
-                where: {
-                    categories: {
-                        some: {
-                            name: category
+
+    const token = req.headers.authorization || ''
+    if (token !== '') {
+        const user = await getUserFromToken(token)
+        if (user) {
+            let articlePerPage = await prisma.article.count({ where: { userId: { not: user.id } } })
+            let postsToSkip = 0
+            if (pageNr) {
+                articlePerPage = 3
+                postsToSkip = articlePerPage * pageNr - articlePerPage
+            }
+            try {
+                //check if the category given exists:
+                const categoryExists = await prisma.category.findUnique({ where: { name: category } })
+                console.log('categoryExists: ', categoryExists)
+                if (categoryExists) {
+                    const allArticles = await prisma.article.findMany({
+
+                        skip: postsToSkip,
+                        take: articlePerPage,
+                        include: { categories: true, author: true, _count: { select: { comments: true, likes: true } } },
+                        where: {
+                            userId: {
+                                not: user.id
+                            },
+                            categories: {
+                                some: {
+                                    name: category
+                                }
+                            }
+                        }
+                    })
+                    const totalArticlesCount = await prisma.article.count({
+                        where: {
+                            userId: {
+                                not: user.id
+                            },
+                            categories: {
+                                some: { name: category }
+                            }
+                        }
+                    })
+                    if (pageNr) {
+                        res.status(200).send({ articles: allArticles, articlesCount: totalArticlesCount })
+                    } else {
+                        res.status(200).send(allArticles)
+                    }
+
+                } else {
+                    res.send({ error: 'No matches found' })
+                }
+            } catch (err) {
+                //@ts-ignore
+                res.status(400).send({ error: err.message })
+            }
+        } else {
+            res.status(400).send({ error: 'Invalid token' })
+        }
+    } else {
+        let articlePerPage = await prisma.article.count()
+        let postsToSkip = 0
+        if (pageNr) {
+            articlePerPage = 3
+            postsToSkip = articlePerPage * pageNr - articlePerPage
+        }
+        try {
+            //check if the category given exists:
+            const categoryExists = await prisma.category.findUnique({ where: { name: category } })
+            console.log('categoryExists: ', categoryExists)
+            if (categoryExists) {
+                const allArticles = await prisma.article.findMany({
+                    skip: postsToSkip,
+                    take: articlePerPage,
+                    include: { categories: true, author: true, _count: { select: { comments: true, likes: true } } },
+                    where: {
+                        categories: {
+                            some: {
+                                name: category
+                            }
                         }
                     }
-                }
-            })
-            const totalArticlesCount = await prisma.article.count({
-                where: {
-                    categories: {
-                        some: { name: category }
+                })
+                const totalArticlesCount = await prisma.article.count({
+                    where: {
+                        categories: {
+                            some: { name: category }
+                        }
                     }
+                })
+                if (pageNr) {
+                    res.status(200).send({ articles: allArticles, articlesCount: totalArticlesCount })
+                } else {
+                    res.status(200).send(allArticles)
                 }
-            })
-            if (pageNr) {
-                res.status(200).send({ articles: allArticles, articlesCount: totalArticlesCount })
-            } else {
-                res.status(200).send(allArticles)
-            }
 
-        } else {
-            res.send({ error: 'No matches found' })
+            } else {
+                res.send({ error: 'No matches found' })
+            }
+        } catch (err) {
+            //@ts-ignore
+            res.status(400).send({ error: err.message })
         }
-    } catch (err) {
-        //@ts-ignore
-        res.status(400).send({ error: err.message })
     }
 })
 
@@ -433,8 +541,10 @@ app.get('/users/:username', async (req, res) => {
 })
 
 app.get('/popular', async (req, res) => {
+    const token = req.headers.authorization || '';
+
     try {
-        const articles = await prisma.article.findMany({
+        let articles = await prisma.article.findMany({
             include: {
                 _count: {
                     select: {
@@ -446,6 +556,30 @@ app.get('/popular', async (req, res) => {
             }
 
         })
+        if (token) {
+            const user = await getUserFromToken(token)
+            if (user) {
+                articles = await prisma.article.findMany({
+                    where: {
+                        userId: {
+                            not: user.id
+                        }
+                    },
+                    include: {
+                        _count: {
+                            select: {
+                                likes: true
+                            }
+                        },
+                        author: true,
+                        categories: true
+                    }
+
+                })
+            } else {
+                res.status(400).send('Invalid token!')
+            }
+        }
         const popularArticles = articles.filter(article => article['_count'].likes > 4)
         res.send(popularArticles)
     } catch (err) {
