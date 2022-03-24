@@ -49,17 +49,47 @@ app.post('/users', async (req, res) => {
         res.send({ error: err.message })
     }
 })
-
+app.patch('/users/:id', async (req, res) => {
+    const token = req.headers.authorization || ''
+    const id = Number(req.params.id)
+    try {
+        const user = await getUserFromToken(token)
+        if(user && user.id === id){
+            const { 
+                email = user.email,
+                username = user.username, 
+                firstName = user.firstName, 
+                lastName = user.lastName,
+                password,
+                bio = user.bio 
+            } = req.body
+            
+            const hash = bcrypt.hashSync(password, 8)
+            const userUpdated = await prisma.user.update({
+                where: {id},
+                data: {
+                    email, username, firstName, lastName, password: hash, bio
+                },
+                include: {
+                    articles: true,
+                    comments: true,
+                    likes: true
+                }
+            })
+            if (userUpdated) {
+                const token = createToken(userUpdated.id)
+                res.send({ userUpdated, token })
+            } else throw Error()
+        }
+    } catch (err) {
+        // @ts-ignore
+        res.send({ error: err.message })
+    }
+})
 app.post('/login', async (req, res) => {
     const { email, password } = req.body
     try {
-        const user = await prisma.user.findUnique({
-            where: { email },
-            include: {
-                articles: true
-            }
-
-        })
+        const user = await prisma.user.findUnique({ where: { email }})
         if (user) {
             const token = createToken(user.id)
             const passwordMatches = bcrypt.compareSync(password, user.password)
@@ -246,7 +276,6 @@ app.post('/likes', async (req, res) => {
                 }
             }
         }
-
     } catch (err) {
         //@ts-ignore
         res.status(400).send({ error: err.message })
@@ -295,14 +324,22 @@ app.get('/articles', async (req, res) => {
     const articles = await prisma.article.findMany({
         skip: postsToSkip,
         take: articlePerPage,
-        include: { categories: true, author: true }
+        include: { 
+            categories: true,
+            author: true, 
+            _count:{
+                select:{
+                    categories:true,
+                    likes:true
+                }
+            } 
+        }
     })
     if (pageNr) {
         res.status(200).send({ articles, articlesCount: totalArticlesCount })
     } else {
         res.status(200).send(articles)
     }
-
 })
 
 app.get('/articles/:category', async (req, res) => {
