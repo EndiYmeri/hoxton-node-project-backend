@@ -54,19 +54,19 @@ app.patch('/users/:id', async (req, res) => {
     const id = Number(req.params.id)
     try {
         const user = await getUserFromToken(token)
-        if(user && user.id === id){
-            const { 
+        if (user && user.id === id) {
+            const {
                 email = user.email,
-                username = user.username, 
-                firstName = user.firstName, 
+                username = user.username,
+                firstName = user.firstName,
                 lastName = user.lastName,
                 password,
-                bio = user.bio 
+                bio = user.bio
             } = req.body
-            
+
             const hash = bcrypt.hashSync(password, 8)
             const userUpdated = await prisma.user.update({
-                where: {id},
+                where: { id },
                 data: {
                     email, username, firstName, lastName, password: hash, bio
                 },
@@ -89,7 +89,7 @@ app.patch('/users/:id', async (req, res) => {
 app.post('/login', async (req, res) => {
     const { email, password } = req.body
     try {
-        const user = await prisma.user.findUnique({ where: { email }})
+        const user = await prisma.user.findUnique({ where: { email } })
         if (user) {
             const token = createToken(user.id)
             const passwordMatches = bcrypt.compareSync(password, user.password)
@@ -324,15 +324,15 @@ app.get('/articles', async (req, res) => {
     const articles = await prisma.article.findMany({
         skip: postsToSkip,
         take: articlePerPage,
-        include: { 
+        include: {
             categories: true,
-            author: true, 
-            _count:{
-                select:{
-                    categories:true,
-                    likes:true
+            author: true,
+            _count: {
+                select: {
+                    categories: true,
+                    likes: true
                 }
-            } 
+            }
         }
     })
     if (pageNr) {
@@ -376,7 +376,7 @@ app.get('/articles/:category', async (req, res) => {
                 }
             })
             if (pageNr) {
-                res.status(200).send({ articles: allArticles, pageCount: totalArticlesCount/articlePerPage })
+                res.status(200).send({ articles: allArticles, pageCount: totalArticlesCount / articlePerPage })
             } else {
                 res.status(200).send(allArticles)
             }
@@ -433,8 +433,10 @@ app.get('/users/:username', async (req, res) => {
 })
 
 app.get('/popular', async (req, res) => {
+    const token = req.headers.authorization || '';
+
     try {
-        const articles = await prisma.article.findMany({
+        let articles = await prisma.article.findMany({
             include: {
                 _count: {
                     select: {
@@ -446,6 +448,30 @@ app.get('/popular', async (req, res) => {
             }
 
         })
+        if (token) {
+            const user = await getUserFromToken(token)
+            if (user) {
+                articles = await prisma.article.findMany({
+                    where: {
+                        userId: {
+                            not: user.id
+                        }
+                    },
+                    include: {
+                        _count: {
+                            select: {
+                                likes: true
+                            }
+                        },
+                        author: true,
+                        categories: true
+                    }
+
+                })
+            } else {
+                res.status(400).send('Invalid token!')
+            }
+        }
         const popularArticles = articles.filter(article => article['_count'].likes > 4)
         res.send(popularArticles)
     } catch (err) {
