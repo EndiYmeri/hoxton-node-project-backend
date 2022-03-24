@@ -397,51 +397,102 @@ app.get('/articles', async (req, res) => {
 })
 
 app.get('/articles/:category', async (req, res) => {
+
+    const token = req.headers.authorization || ''
     let category = req.params.category
     let pageNr = Number(req.query.page)
-    let articlePerPage = await prisma.article.count()
-    let postsToSkip = 0
-    if (pageNr) {
-        articlePerPage = 3
-        postsToSkip = articlePerPage * pageNr - articlePerPage
-    }
+
     try {
-        //check if the category given exists:
         const categoryExists = await prisma.category.findUnique({ where: { name: category } })
-        console.log('categoryExists: ', categoryExists)
         if (categoryExists) {
-            const allArticles = await prisma.article.findMany({
-                skip: postsToSkip,
-                take: articlePerPage,
-                include: { categories: true, author: true, _count: { select: { comments: true, likes: true } } },
-                where: {
-                    categories: {
-                        some: {
-                            name: category
+            if (token !== '') {
+                const user = await getUserFromToken(token)
+                if (user) {
+                    let articlePerPage = await prisma.article.count({ where: { userId: { not: user.id } } })
+                    let postsToSkip = 0
+                    if (pageNr) {
+                        articlePerPage = 3
+                        postsToSkip = articlePerPage * pageNr - articlePerPage
+                    }
+
+                    const allArticles = await prisma.article.findMany({
+
+                        skip: postsToSkip,
+                        take: articlePerPage,
+                        include: { categories: true, author: true, _count: { select: { comments: true, likes: true } } },
+                        where: {
+                            userId: {
+                                not: user.id
+                            },
+                            categories: {
+                                some: {
+                                    name: category
+                                }
+                            }
+                        }
+                    })
+                    const totalArticlesCount = await prisma.article.count({
+                        where: {
+                            userId: {
+                                not: user.id
+                            },
+                            categories: {
+                                some: { name: category }
+                            }
+                        }
+                    })
+                    if (pageNr) {
+                        res.status(200).send({ articles: allArticles, articlesCount: totalArticlesCount })
+                    } else {
+                        res.status(200).send(allArticles)
+                    }
+
+                } else {
+                    res.status(404).send({ error: 'User not found' })
+                }
+            } else {
+                let articlePerPage = await prisma.article.count()
+                let postsToSkip = 0
+                if (pageNr) {
+                    articlePerPage = 3
+                    postsToSkip = articlePerPage * pageNr - articlePerPage
+                }
+
+
+                const allArticles = await prisma.article.findMany({
+                    skip: postsToSkip,
+                    take: articlePerPage,
+                    include: { categories: true, author: true, _count: { select: { comments: true, likes: true } } },
+                    where: {
+                        categories: {
+                            some: {
+                                name: category
+                            }
                         }
                     }
-                }
-            })
-            const totalArticlesCount = await prisma.article.count({
-                where: {
-                    categories: {
-                        some: { name: category }
+                })
+                const totalArticlesCount = await prisma.article.count({
+                    where: {
+                        categories: {
+                            some: { name: category }
+                        }
                     }
+                })
+                if (pageNr) {
+                    res.status(200).send({ articles: allArticles, articlesCount: totalArticlesCount })
+                } else {
+                    res.status(200).send(allArticles)
                 }
-            })
-            if (pageNr) {
-                res.status(200).send({ articles: allArticles, pageCount: totalArticlesCount / articlePerPage })
-            } else {
-                res.status(200).send(allArticles)
             }
 
         } else {
-            res.send({ error: 'No matches found' })
+            res.status(404).send({ error: 'Category not found!' })
         }
     } catch (err) {
         //@ts-ignore
         res.status(400).send({ error: err.message })
     }
+
 })
 
 app.get('/categories', async (req, res) => {
