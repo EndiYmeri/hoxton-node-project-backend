@@ -442,7 +442,7 @@ app.get('/articles/:category', async (req, res) => {
                         }
                     })
                     if (pageNr) {
-                        res.status(200).send({ articles: allArticles, articlesCount: totalArticlesCount })
+                        res.status(200).send({ articles: allArticles, pageCount: totalArticlesCount / articlePerPage })
                     } else {
                         res.status(200).send(allArticles)
                     }
@@ -479,7 +479,7 @@ app.get('/articles/:category', async (req, res) => {
                     }
                 })
                 if (pageNr) {
-                    res.status(200).send({ articles: allArticles, articlesCount: totalArticlesCount })
+                    res.status(200).send({ articles: allArticles, pageCount: totalArticlesCount / articlePerPage })
                 } else {
                     res.status(200).send(allArticles)
                 }
