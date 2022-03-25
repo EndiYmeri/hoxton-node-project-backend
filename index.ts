@@ -614,4 +614,53 @@ app.delete('/article/:id', async (req, res) => {
 
 })
 
+
+app.get('/search', async (req, res) => {
+    //@ts-ignore
+    const search = req.query.search.toString()
+    try {
+
+        console.log('search', search)
+        if (search) {
+            const matches = await prisma.article.findMany({
+                where: {
+                    OR: [
+                        {
+                            title: {
+                                contains: search
+                            }
+                        },
+                        {
+                            intro: {
+                                contains: search
+                            }
+                        },
+                        {
+                            content: {
+                                contains: search
+                            }
+                        }
+                    ]
+                },
+                include: {
+                    author: true,
+                    categories: true
+                }
+            })
+            if (matches.length !== 0) {
+                res.status(200).send(matches)
+            } else {
+                res.status(404).send({ error: 'No matches found!' })
+            }
+        } else {
+            const allArticles = await prisma.article.findMany()
+            res.status(200).send(allArticles)
+        }
+
+    } catch (err) {
+        //@ts-ignore
+        res.status(400).send({ error: err.messsage })
+    }
+})
+
 app.listen(PORT, () => console.log(`Server up on http://localhost:${PORT}`))
